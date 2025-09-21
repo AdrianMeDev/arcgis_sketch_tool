@@ -1,0 +1,19 @@
+/* Global styles and ArcGIS CSS */
+@import "@arcgis/core/assets/esri/themes/light/main.css";
+
+/* Ensure full-height layout */
+html,
+body,
+app-root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Material containers should fill viewport */
+.mat-drawer-container,
+.mat-sidenav-container {
+  height: 100%;
+}

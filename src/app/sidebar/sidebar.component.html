@@ -1,0 +1,150 @@
+<div class="sidebar" [formGroup]="form">
+  <h3>Draw & Label</h3>
+
+  <div class="section">
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Tool</mat-label>
+      <mat-select formControlName="tool">
+        <mat-option *ngFor="let t of tools" [value]="t.value">{{
+          t.label
+        }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" (click)="onStartDraw()">
+      Start Drawing
+    </button>
+  </div>
+
+  <div class="section">
+    <h4>Select</h4>
+    <button mat-stroked-button (click)="onSelectByRect()">
+      Select by Rectangle
+    </button>
+  </div>
+
+  <div class="section">
+    <h4>Fill</h4>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Fill Color</mat-label>
+      <input matInput type="color" formControlName="fillColor" />
+    </mat-form-field>
+
+    <label class="slider-label"
+      >Opacity: {{ form.get("fillOpacity")?.value | number : "1.0-2" }}</label
+    >
+    <mat-slider
+      min="0"
+      max="1"
+      step="0.05"
+      formControlName="fillOpacity"
+    ></mat-slider>
+  </div>
+
+  <div class="section">
+    <h4>Outline</h4>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Outline Color</mat-label>
+      <input matInput type="color" formControlName="outlineColor" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Outline Width (px)</mat-label>
+      <input matInput type="number" min="0" formControlName="outlineWidth" />
+    </mat-form-field>
+  </div>
+
+  <div class="section" formGroupName="text">
+    <h4>Text</h4>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Content</mat-label>
+      <input matInput formControlName="content" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Font Family</mat-label>
+      <input matInput formControlName="fontFamily" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Font Size (px)</mat-label>
+      <input matInput type="number" min="6" formControlName="fontSize" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Text Color</mat-label>
+      <input matInput type="color" formControlName="color" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Halo Color</mat-label>
+      <input matInput type="color" formControlName="haloColor" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Halo Size (px)</mat-label>
+      <input matInput type="number" min="0" formControlName="haloSize" />
+    </mat-form-field>
+  </div>
+
+  <div class="section" formGroupName="labels">
+    <h4>Labels</h4>
+    <mat-slide-toggle formControlName="showDuringDraw"
+      >Show During Draw</mat-slide-toggle
+    >
+    <mat-slide-toggle formControlName="showSegmentLengths"
+      >Segment Lengths</mat-slide-toggle
+    >
+    <mat-slide-toggle formControlName="showTotals">Totals</mat-slide-toggle>
+    <mat-slide-toggle formControlName="showCircleRadius"
+      >Circle Radius</mat-slide-toggle
+    >
+    <mat-slide-toggle formControlName="showTitle">Title</mat-slide-toggle>
+  </div>
+
+  <div class="section">
+    <h4>Visibility</h4>
+    <mat-slide-toggle
+      [checked]="true"
+      (change)="showSketchChange.emit($event.checked)"
+    >
+      Drawings + Labels
+    </mat-slide-toggle>
+    <mat-slide-toggle
+      [checked]="true"
+      (change)="showTextChange.emit($event.checked)"
+    >
+      Text
+    </mat-slide-toggle>
+  </div>
+
+  <div class="section row">
+    <button mat-stroked-button color="primary" (click)="onExport()">
+      Export (Esri JSON)
+    </button>
+    <button mat-stroked-button color="primary" (click)="onImport()">
+      Import
+    </button>
+    <button mat-button color="warn" (click)="onClear()">Clear All</button>
+  </div>
+
+  <!-- Selection Measurements at the bottom -->
+  <div class="section" *ngIf="measurements?.length">
+    <h4>Selection Measurements</h4>
+
+    <div *ngFor="let m of measurements" class="measurement-block">
+      <div class="measurement-title">
+        {{ m.title || "ID: " + m.id }} — {{ m.geometryType }}
+        <span *ngIf="m.tool">({{ m.tool }})</span>
+      </div>
+      <table class="measurement-table">
+        <tbody>
+          <tr *ngFor="let r of m.rows">
+            <td class="m-label">{{ r.label }}</td>
+            <td class="m-value">{{ r.value }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

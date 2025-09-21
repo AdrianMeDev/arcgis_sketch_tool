@@ -1,0 +1,14 @@
+.app-shell {
+  height: 100vh;
+}
+
+mat-sidenav-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-host {
+  flex: 1 1 auto;
+  min-height: 0; /* allow child to size itself */
+}

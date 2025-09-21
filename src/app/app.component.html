@@ -1,0 +1,32 @@
+<mat-sidenav-container class="app-shell">
+  <mat-sidenav mode="side" [fixedInViewport]="true" opened>
+    <app-sidebar
+      [measurements]="measurements"
+      (settingsChange)="onSettingsChange($event)"
+      (startDraw)="onStartDraw($event)"
+      (clearAll)="onClear()"
+      (exportJson)="onExport()"
+      (importJson)="onImport()"
+      (showSketchChange)="onShowSketchChange($event)"
+      (showTextChange)="onShowTextChange($event)"
+      (selectByRect)="onSelectByRect()"
+    ></app-sidebar>
+  </mat-sidenav>
+
+  <input
+    #importInput
+    type="file"
+    accept="application/json"
+    (change)="onFileSelected($event)"
+    style="display: none"
+  />
+  <mat-sidenav-content>
+    <mat-toolbar color="primary">
+      <span>{{ title }}</span>
+    </mat-toolbar>
+
+    <div class="map-host" role="region" aria-label="Map area">
+      <app-map (ready)="onMapReady($event)"></app-map>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

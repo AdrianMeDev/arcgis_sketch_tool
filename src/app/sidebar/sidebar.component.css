@@ -1,0 +1,32 @@
+.sidebar {
+  box-sizing: border-box;
+  width: 320px;
+  padding: 16px;
+  display: block;
+  height: 100%;
+  overflow: auto;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.section h4 {
+  margin: 8px 0;
+}
+
+.full {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.slider-label {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(0, 0, 0, 0.6);
+}
