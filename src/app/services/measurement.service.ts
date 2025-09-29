@@ -181,4 +181,41 @@ export class MeasurementService {
       return null;
     }
   }
+  getSegments(geom: Polyline | Polygon): [number[], number[]][] {
+    const segments: [number[], number[]][] = [];
+    if (!geom) return segments;
+
+    if ((geom as Polyline).paths) {
+      const pl = geom as Polyline;
+      (pl.paths ?? []).forEach((path) => {
+        for (let i = 0; i < path.length - 1; i++) {
+          segments.push([path[i], path[i + 1]]);
+        }
+      });
+    } else {
+      const pg = geom as Polygon;
+      (pg.rings ?? []).forEach((ring) => {
+        for (let i = 0; i < ring.length - 1; i++) {
+          segments.push([ring[i], ring[i + 1]]);
+        }
+      });
+    }
+    return segments;
+  }
+
+  getSegmentMidpoint(segment: [number[], number[]], spatialReference: any): Point {
+    const [[x1, y1], [x2, y2]] = segment;
+    return new Point({
+      x: (x1 + x2) / 2,
+      y: (y1 + y2) / 2,
+      spatialReference: spatialReference,
+    });
+  }
+
+  getSegmentAngle(segment: [number[], number[]]): number {
+    const [[x1, y1], [x2, y2]] = segment;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return (Math.atan2(dy, dx) * 180) / Math.PI; // Angle in degrees
+  }
 }

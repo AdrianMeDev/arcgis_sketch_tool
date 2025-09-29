@@ -1,0 +1,51 @@
+.sketch-table-container {
+  margin-top: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sketch-table-container h3 {
+  background-color: #f0f0f0;
+  padding: 10px;
+  margin: 0;
+  border-bottom: 1px solid #ccc;
+  font-size: 1.1em;
+}
+
+.sketch-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sketch-table th,
+.sketch-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+  font-size: 0.9em;
+}
+
+.sketch-table th {
+  background-color: #f8f8f8;
+  font-weight: bold;
+}
+
+.sketch-table tbody tr {
+  cursor: pointer;
+}
+
+.sketch-table tbody tr:hover {
+  background-color: #e0e0e0;
+}
+
+.sketch-table tbody tr.selected {
+  background-color: #ffeb3b; /* Bright yellow */
+  color: #333;
+  font-weight: bold;
+  border: 2px solid #f44336; /* Red border */
+}
+
+.sketch-table tbody tr:last-child td {
+  border-bottom: none;
+}

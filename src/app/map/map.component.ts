@@ -14,6 +14,9 @@ import { CommonModule } from '@angular/common';
 import EsriMap from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import Graphic from '@arcgis/core/Graphic';
+import SketchViewModel from '@arcgis/core/widgets/Sketch/SketchViewModel';
+import { SketchService } from '../services/sketch.service';
 
 export interface MapReadyEvent {
   view: MapView;
@@ -44,7 +47,7 @@ export class MapComponent implements OnInit, OnDestroy {
   labelLayer!: GraphicsLayer;
   textLayer!: GraphicsLayer;
 
-  constructor(private zone: NgZone) {}
+  constructor(private zone: NgZone, private sketchService: SketchService) {}
 
   ngOnInit(): void {
     // Create layers
@@ -94,6 +97,7 @@ export class MapComponent implements OnInit, OnDestroy {
       this.view.destroy?.();
     }
   }
+
 
   // Expose view for consumers (e.g., services)
   get mapView(): MapView {

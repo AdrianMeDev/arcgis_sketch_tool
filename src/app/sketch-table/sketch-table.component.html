@@ -1,0 +1,32 @@
+<div class="sketch-table-container">
+  <h3>Sketches and Texts</h3>
+  <table class="sketch-table">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Geometry Type</th>
+        <th>Measurements</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let graphic of graphics"
+        [class.selected]="isSelected(graphic)"
+        (click)="onRowClick($event, graphic)"
+      >
+        <td>{{ getGraphicTitle(graphic) }}</td>
+        <td>{{ getGraphicGeometryType(graphic) }}</td>
+        <td>
+          <ng-container *ngIf="getGraphicMeasurements(graphic) as measurements">
+            <div *ngFor="let row of measurements.rows">
+              {{ row.label }}: {{ row.value }}
+            </div>
+          </ng-container>
+        </td>
+      </tr>
+      <tr *ngIf="graphics.length === 0">
+        <td colspan="3">No sketches or texts drawn yet.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

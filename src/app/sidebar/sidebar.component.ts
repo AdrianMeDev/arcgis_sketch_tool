@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, Input } from '@angular/core';
+import { Component, EventEmitter, Output, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -9,6 +9,9 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatButtonModule } from '@angular/material/button';
 import { DrawSettings, GeometryTool } from '../models/draw-settings';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { SketchTableComponent } from '../sketch-table/sketch-table.component';
+import { SketchService } from '../services/sketch.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -23,11 +26,12 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
     MatButtonToggleModule,
     MatButtonModule,
     MatSlideToggleModule,
+    SketchTableComponent,
   ],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css'],
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit, OnDestroy {
   @Output() settingsChange = new EventEmitter<DrawSettings>();
   @Output() startDraw = new EventEmitter<GeometryTool>();
   @Output() clearAll = new EventEmitter<void>();
@@ -41,6 +45,9 @@ export class SidebarComponent {
   measurements: import('../models/selection-measurements').SelectionMeasurement[] =
     [];
 
+  selectedGraphicIds: string[] = [];
+  private subscriptions: Subscription[] = [];
+
   form: FormGroup;
 
   tools: { value: GeometryTool; label: string }[] = [
@@ -52,7 +59,7 @@ export class SidebarComponent {
     { value: 'text', label: 'Text' },
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private sketchService: SketchService) {
     this.form = this.fb.group({
       tool: 'polygon',
       fillColor: '#0078ff',
@@ -79,6 +86,18 @@ export class SidebarComponent {
     this.form.valueChanges.subscribe(() => {
       this.settingsChange.emit(this.value());
     });
+  }
+
+  ngOnInit(): void {
+    this.subscriptions.push(
+      this.sketchService.selectedGraphicIds$.subscribe((ids) => {
+        this.selectedGraphicIds = ids;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   value(): DrawSettings {
@@ -145,6 +164,7 @@ export class SidebarComponent {
 
   onClear(): void {
     this.clearAll.emit();
+    this.sketchService.clearSelection(); // Clear selection when clearing all graphics
   }
 
   onExport(): void {
@@ -157,5 +177,10 @@ export class SidebarComponent {
 
   onSelectByRect(): void {
     this.selectByRect.emit();
+  }
+
+  onGraphicSelected(graphicId: string): void {
+    // For now, single selection from table. Can be extended for multi-selection later.
+    this.sketchService.selectGraphics([graphicId]);
   }
 }

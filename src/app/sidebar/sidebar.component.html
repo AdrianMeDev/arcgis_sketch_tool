@@ -147,4 +147,9 @@
       </table>
     </div>
   </div>
+
+  <app-sketch-table
+    [selectedGraphicIds]="selectedGraphicIds"
+    (graphicSelected)="onGraphicSelected($event)"
+  ></app-sketch-table>
 </div>

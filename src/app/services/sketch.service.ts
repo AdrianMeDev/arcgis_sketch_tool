@@ -22,7 +22,7 @@ export class SketchService {
   private drawLayer!: GraphicsLayer;
   private labelLayer!: GraphicsLayer;
   private textLayer!: GraphicsLayer;
-  private svm!: SketchViewModel;
+  public svm!: SketchViewModel;
   private textClickHandler: IHandle | null = null;
   private tempLabels: Graphic[] = [];
   // Selection tool state: when set, create events act as selection geometry
@@ -41,7 +41,7 @@ export class SketchService {
   // Persisted labels per sketched graphic
   private labelIndex = new Map<string, Graphic[]>();
 
-  private getGraphicId(graphic: Graphic): string {
+  public getGraphicId(graphic: Graphic): string {
     let id = (graphic as any).__sid as string | undefined;
     if (!id) {
       id = `g-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -49,6 +49,14 @@ export class SketchService {
     }
     return id;
   }
+
+  // Expose all graphics for the table component
+  private allGraphicsSubject = new Subject<Graphic[]>();
+  public readonly allGraphics$ = this.allGraphicsSubject.asObservable();
+
+  // Expose selected graphic IDs for the table component
+  private selectedGraphicIdsSubject = new Subject<string[]>();
+  public readonly selectedGraphicIds$ = this.selectedGraphicIdsSubject.asObservable();
 
   private removePersistedLabelsFor(graphic: Graphic): void {
     const id = (graphic as any).__sid as string | undefined;
@@ -190,6 +198,14 @@ export class SketchService {
                 : Array.from(this.selectionLayer!.graphics as any);
               this.svm.update(toEdit);
               this.publishMeasurementsFromGraphics(toEdit as Graphic[]);
+
+              // Get IDs of original graphics from the clones
+              const originalSelectedIds = toEdit
+                .map((clone: Graphic) => this.selectionMap.get(clone))
+                .filter((src: Graphic | undefined): src is Graphic => src !== undefined)
+                .map((src: Graphic) => this.getGraphicId(src));
+
+              this.setSelectedGraphicIds(originalSelectedIds);
             }
           } finally {
             // Reset selection mode
@@ -201,6 +217,7 @@ export class SketchService {
         if ((evt as any).state === 'cancel') {
           this.selectionMode = null;
           this.clearTempLabels();
+          this.setSelectedGraphicIds([]);
         }
         return;
       }
@@ -275,6 +292,9 @@ export class SketchService {
         this.publishMeasurementsFromGraphics(
           (evt.graphics ?? []) as unknown as Graphic[]
         );
+        // Publish selected graphic IDs
+        const selectedIds = (evt.graphics ?? []).map((g: Graphic) => this.getGraphicId(g));
+        this.setSelectedGraphicIds(selectedIds);
       }
 
       if ((evt as any).state === 'complete') {
@@ -326,8 +346,18 @@ export class SketchService {
 
           this.labelIndex.set(gid, persisted);
         });
+        // Clear selected graphic IDs on complete
+        this.setSelectedGraphicIds([]);
+      }
+
+      if ((evt as any).state === 'cancel') {
+        this.isEditing = false;
+        this.clearTempLabels();
+        // Clear selected graphic IDs on cancel
+        this.setSelectedGraphicIds([]);
       }
     });
+    this.publishAllGraphics();
   }
 
   private currentSettings: DrawSettings | null = null;
@@ -346,6 +376,7 @@ export class SketchService {
 
     // End any selection edit and restore default layer
     this.endSelectionEdit(false);
+    this.publishAllGraphics();
 
     // Clear any previous one-off text handler
     this.textClickHandler?.remove();
@@ -383,6 +414,7 @@ export class SketchService {
     this.drawLayer.removeAll();
     this.labelLayer.removeAll();
     this.textLayer.removeAll();
+    this.publishAllGraphics();
   }
 
   // Start a selection tool that selects any graphics intersecting the drawn shape
@@ -425,6 +457,7 @@ export class SketchService {
           attributes: { tool: 'text', title: settings.text.content },
         });
         this.textLayer.add(g);
+        this.publishAllGraphics();
       });
 
       // single-use
@@ -557,6 +590,52 @@ export class SketchService {
     // Clear selection measurements in UI
     this.measurementsSubject.next([]);
     (this.svm as any).layer = this.drawLayer;
+    this.selectedGraphicIdsSubject.next([]);
+  }
+
+  public setSelectedGraphicIds(ids: string[]): void {
+    this.selectedGraphicIdsSubject.next(ids);
+  }
+
+  private publishAllGraphics(): void {
+    const allGraphics: Graphic[] = [];
+    (this.drawLayer.graphics as unknown as Graphic[]).forEach(g => allGraphics.push(g));
+    (this.textLayer.graphics as unknown as Graphic[]).forEach(g => allGraphics.push(g));
+    this.allGraphicsSubject.next(allGraphics);
+  }
+
+  public selectGraphics(graphicIds: string[]): void {
+    this.clearSelection(); // Clear any existing selection first
+
+    const graphicsToSelect: Graphic[] = [];
+    graphicIds.forEach(graphicId => {
+      const graphic = [...(this.drawLayer.graphics as unknown as Graphic[]), ...(this.textLayer.graphics as unknown as Graphic[])]
+        .find(g => this.getGraphicId(g) === graphicId);
+      if (graphic) {
+        graphicsToSelect.push(graphic);
+      }
+    });
+
+    if (graphicsToSelect.length > 0) {
+      this.prepareSelectionLayer(true);
+      const clones: Graphic[] = [];
+      graphicsToSelect.forEach(src => {
+        const clone = this.cloneGraphic(src);
+        this.selectionLayer!.add(clone);
+        this.selectionMap.set(clone, src);
+        clones.push(clone);
+      });
+
+      (this.svm as any).layer = this.selectionLayer!;
+      this.svm.update(clones as any);
+      this.publishMeasurementsFromGraphics(clones);
+      this.setSelectedGraphicIds(graphicIds);
+    }
+  }
+
+  public clearSelection(): void {
+    this.svm.cancel();
+    this.endSelectionEdit();
   }
 
   private cloneGraphic(src: Graphic): Graphic {
@@ -640,13 +719,14 @@ export class SketchService {
   ): Graphic[] {
     const labels: Graphic[] = [];
 
-    const addText = (p: Point, text: string) => {
+    const addText = (p: Point, text: string, angle: number = 0) => {
       const symbol = new TextSymbol({
         text,
         color: this.hexToRgbArray(settings.text.color, 1),
         haloColor: this.hexToRgbArray(settings.text.haloColor, 1),
         haloSize: settings.text.haloSize,
         horizontalAlignment: 'center' as any,
+        angle: angle, // Set the angle here
         font: {
           family: settings.text.fontFamily,
           size: settings.text.fontSize,
@@ -658,10 +738,29 @@ export class SketchService {
     if (geom instanceof Polyline) {
       // Segment lengths
       if (settings.labels.showSegmentLengths) {
-        const mids = this.measure.segmentMidpoints(geom);
+        const segments = this.measure.getSegments(geom);
         const lens = this.measure.segmentLengths(geom);
-        for (let i = 0; i < Math.min(mids.length, lens.length); i++) {
-          addText(mids[i], this.measure.formatLength(lens[i]));
+        const labelOffsetPx = 10; // Offset distance in pixels
+
+        for (let i = 0; i < Math.min(segments.length, lens.length); i++) {
+          const segment = segments[i];
+          const midpoint = this.measure.getSegmentMidpoint(segment, geom.spatialReference);
+          let angle = this.measure.getSegmentAngle(segment); // Angle in degrees
+
+          // Normalize angle for text readability (e.g., -90 to 90 degrees)
+          if (angle > 90) {
+            angle -= 180;
+          } else if (angle < -90) {
+            angle += 180;
+          }
+
+          // Calculate offset in screen coordinates
+          const angleRad = (angle + 90) * (Math.PI / 180); // Perpendicular angle
+          const dxPx = labelOffsetPx * Math.cos(angleRad);
+          const dyPx = labelOffsetPx * Math.sin(angleRad);
+
+          const offsetMidpoint = this.offsetPoint(midpoint, dxPx, dyPx);
+          addText(offsetMidpoint, this.measure.formatLength(lens[i]), angle);
         }
       }
       // Center labels for polylines: title on top, then total length; uniform spacing
@@ -693,10 +792,29 @@ export class SketchService {
     } else if (geom instanceof Polygon) {
       // Segment lengths
       if (settings.labels.showSegmentLengths) {
-        const mids = this.measure.segmentMidpoints(geom);
+        const segments = this.measure.getSegments(geom);
         const lens = this.measure.segmentLengths(geom);
-        for (let i = 0; i < Math.min(mids.length, lens.length); i++) {
-          addText(mids[i], this.measure.formatLength(lens[i]));
+        const labelOffsetPx = 10; // Offset distance in pixels
+
+        for (let i = 0; i < Math.min(segments.length, lens.length); i++) {
+          const segment = segments[i];
+          const midpoint = this.measure.getSegmentMidpoint(segment, geom.spatialReference);
+          let angle = this.measure.getSegmentAngle(segment); // Angle in degrees
+
+          // Normalize angle for text readability (e.g., -90 to 90 degrees)
+          if (angle > 90) {
+            angle -= 180;
+          } else if (angle < -90) {
+            angle += 180;
+          }
+
+          // Calculate offset in screen coordinates
+          const angleRad = (angle + 90) * (Math.PI / 180); // Perpendicular angle
+          const dxPx = labelOffsetPx * Math.cos(angleRad);
+          const dyPx = labelOffsetPx * Math.sin(angleRad);
+
+          const offsetMidpoint = this.offsetPoint(midpoint, dxPx, dyPx);
+          addText(offsetMidpoint, this.measure.formatLength(lens[i]), angle);
         }
       }
       // Center labels for polygons: title on top, then A/P and optional R; uniform spacing
